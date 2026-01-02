@@ -3,7 +3,7 @@ import time
 import subprocess
 from pathlib import Path
 from config.settings import SAP_CONFIG, PROCESO_CONFIG
-from config.DespliegueAmbiente import ambiente
+from HU.HU00_DespliegueAmbiente import ambiente
 
 class ConexionSAP:
 
