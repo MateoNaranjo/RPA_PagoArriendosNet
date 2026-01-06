@@ -37,3 +37,10 @@ PROCESO_CONFIG = {
 # Validar que SAP_PATH existe
 if SAP_CONFIG['SAP_PATH'] and not Path(SAP_CONFIG['SAP_PATH']).exists():
     print(f"⚠️  ADVERTENCIA: SAP GUI no encontrado en: {SAP_CONFIG['SAP_PATH']}")
+
+DATABASE = {
+    'DB_SERVER': os.getenv('DB_SERVER'),
+    'DB_NAME': os.getenv('DB_NAME'),
+    'DB_USER': os.getenv('DB_USER'),
+    'DB_PASSWORD': os.getenv('DB_PASSWORD')
+}
