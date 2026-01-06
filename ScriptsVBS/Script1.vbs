@@ -13,7 +13,8 @@ If IsObject(WScript) Then
    WScript.ConnectObject application, "on"
 End If
 session.findById("wnd[0]").maximize
-session.findById("wnd[0]/tbar[1]/btn[17]").press
-session.findById("wnd[1]/usr/subSUB0:SAPLMEGUI:0003/ctxtMEPO_SELECT-EBELN").text = "puto109507"
-session.findById("wnd[1]/usr/subSUB0:SAPLMEGUI:0003/ctxtMEPO_SELECT-EBELN").caretPosition = 4
-session.findById("wnd[1]").sendVKey 0
+session.findById("wnd[0]/usr/ctxtEL_LIFNR-LOW").text = "9000"
+session.findById("wnd[0]/usr/ctxtLISTU").text = "alv"
+session.findById("wnd[0]/usr/ctxtLISTU").setFocus
+session.findById("wnd[0]/usr/ctxtLISTU").caretPosition = 3
+session.findById("wnd[0]/tbar[1]/btn[8]").press

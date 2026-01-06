@@ -157,7 +157,7 @@ class ConexionSAP:
             self.logger.error(f"Error al abrir transacción {transaccion}: {str(e)}")
             return False
 
-    ''''def consultar_oc(self, sesion, oc):
+    def consultar_oc(self, sesion, oc):
         try:
             sesion.findById("wnd[0]").maximize()
             sesion.findById("wnd[0]/tbar[1]/btn[17]").press()
@@ -167,7 +167,7 @@ class ConexionSAP:
             sesion.findById("wnd[1]").sendVKey(0)
             print("Consulta de OC ejecutada correctamente")
         except Exception as e:
-            print(f"Fallo en consultar_oc: {e}")'''
+            print(f"Fallo en consultar_oc: {e}")
 
 
 
