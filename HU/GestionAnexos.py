@@ -9,7 +9,7 @@ class GestionAnexos:
         self.sesion = sap_conexion.sesion
         self.logger = logging.getLogger("main_proceso_masivo")
 
-    def _interaccion_ventana_windows(self, ruta_archivo):
+    def _interaccion_ventana_windows(self, ruta_archivo, ventana):
         """
         Maneja la ventana externa 'Import file' inyectando la ruta y dando Enter.
         """
@@ -19,8 +19,6 @@ class GestionAnexos:
         
         while (time.time() - inicio) < timeout:
             try:
-                desktop = Desktop(backend="win32")
-                ventana = desktop.window(title_re="(?i)Import.*file.*")
                 
                 if ventana.exists():
                     ventana.set_focus()
@@ -58,7 +56,9 @@ class GestionAnexos:
             time.sleep(1)
 
             # 2. LANZAR HILO PARA VENTANA DE WINDOWS
-            hilo_externo = threading.Thread(target=self._interaccion_ventana_windows, args=(ruta_archivo,))
+            desktop = Desktop(backend="win32")
+            ventana = desktop.window(title_re="(?i)Import.*file.*")
+            hilo_externo = threading.Thread(target=self._interaccion_ventana_windows, args=(ruta_archivo, ventana,))
             hilo_externo.daemon = True
             hilo_externo.start()
 

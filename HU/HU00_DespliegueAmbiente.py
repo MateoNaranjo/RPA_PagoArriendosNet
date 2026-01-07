@@ -1,9 +1,7 @@
-import os
 import logging
 from pathlib import Path
 from datetime import datetime
-from config.settings import RUTAS
-from config.init_config import init_config
+from config.init_config import init_config, in_config
 
 class Reutilizables:
     """Clase para manejo de ambiente y logging del proyecto"""
@@ -119,19 +117,22 @@ class Reutilizables:
         """Obtiene ruta completa de archivo en carpeta temp"""
         return self.path_temp / nombre_archivo
     
-    def cargar_configuracion(self):
+    def cargar_configuracion():
         init_config()
+        print("In_config cargado:", in_config("PathProyecto"))
         print("Configuracion global iniciada")
+
+Reutilizables.cargar_configuracion()
+
 
 # Inicializar ambiente al importar
 ambiente = Reutilizables(
-    RUTAS.get('PATH_PROYECTO'),
-    RUTAS.get('PATH_AUDIT'),
-    RUTAS.get('PATH_LOGS'),
-    RUTAS.get('PATH_TEMP'),
-    RUTAS.get('PATH_INSUMO'),
-    RUTAS.get('PATH_RESULTADO')
+    in_config("PathProyecto"),
+    in_config("PathAudit"),
+    in_config("PathLogs"),
+    in_config("PathTemp"),
+    in_config("PathInsumos"),
+    in_config("PathResultados")
 )
 
 ambiente.crear_carpetas()
-ambiente.cargar_configuracion()
