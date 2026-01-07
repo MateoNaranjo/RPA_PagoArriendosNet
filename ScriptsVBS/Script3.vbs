@@ -13,6 +13,5 @@ If IsObject(WScript) Then
    WScript.ConnectObject application, "on"
 End If
 session.findById("wnd[0]").maximize
-session.findById("wnd[0]/usr/txtRSYST-LANGU").text = "ES"
-session.findById("wnd[0]/usr/txtRSYST-LANGU").setFocus
-session.findById("wnd[0]/usr/txtRSYST-LANGU").caretPosition = 2
+session.findById("wnd[0]/tbar[1]/btn[43]").press
+session.findById("wnd[1]/tbar[0]/btn[0]").press
