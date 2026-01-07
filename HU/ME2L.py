@@ -1,7 +1,11 @@
 import time
 import re  # <--- ESTA ES LA LÍNEA QUE FALTA
 import win32com.client
+import threading
+from HU.GestionAnexos import GestionAnexos
+from pywinauto import Desktop
 class TransaccionME2L:
+
     """Clase para gestionar la consulta de pedidos por proveedor en SAP"""
     
     def __init__(self, sap_conexion):
@@ -46,3 +50,17 @@ class TransaccionME2L:
         except Exception as e:
             self.logger.error(f"Error escaneando tabla ME2L: {str(e)}")
             return None
+        
+    def exportar_tabla(self, ruta_archivo):
+
+        desktop = Desktop(backend="win32")
+        ventana = desktop.window(title_re="(?i)Save.*As.*")
+        cargador = GestionAnexos(self)
+        hilo_externo = threading.Thread(target=cargador._interaccion_ventana_windows, args=(ruta_archivo, ventana,))
+        hilo_externo.daemon = True
+        hilo_externo.start()
+
+        self.sesion.findById("wnd[0]/tbar[1]/btn[43]").press()
+        self.sesion.findById("wnd[1]/tbar[0]/btn[0]").press()
+
+        # 2. LANZAR HILO PARA VENTANA DE WINDOWS

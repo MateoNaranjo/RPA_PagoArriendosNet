@@ -92,6 +92,7 @@ class ConexionSAP:
             sesion.findById("wnd[0]").maximize()
             sesion.findById("wnd[0]/usr/txtRSYST-BNAME").text = self.usuario
             sesion.findById("wnd[0]/usr/pwdRSYST-BCODE").text = self.contrasena
+            sesion.findById("wnd[0]/usr/txtRSYST-LANGU").text = self.idioma
             sesion.findById("wnd[0]/usr/txtRSYST-MANDT").text = self.cliente
             sesion.findById("wnd[0]").sendVKey(0)
             time.sleep(2)
