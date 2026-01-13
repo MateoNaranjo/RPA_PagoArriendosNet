@@ -170,8 +170,13 @@ class ConexionSAP:
         except Exception as e:
             print(f"Fallo en consultar_oc: {e}")
 
+    def MenuPrincipal(self):
+        try:
+            self.sesion.findById("wnd[0]/tbar[0]/btn[12]").press()
+        except Exception as e:
+            print("Error al ir al menu:", e)
 
-
+    
 
 '''ejecutarMain=PagoArriendos(SAP_CONFIG.get('SAP_USUARIO'),
                             SAP_CONFIG.get('SAP_PASSWORD'),

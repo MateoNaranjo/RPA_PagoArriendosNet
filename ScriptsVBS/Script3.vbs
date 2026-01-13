@@ -13,5 +13,6 @@ If IsObject(WScript) Then
    WScript.ConnectObject application, "on"
 End If
 session.findById("wnd[0]").maximize
-session.findById("wnd[0]/tbar[1]/btn[43]").press
-session.findById("wnd[1]/tbar[0]/btn[0]").press
+session.findById("wnd[0]/usr/ctxtLISTU").text = "ALV"
+session.findById("wnd[0]/usr/ctxtS_EBELN-LOW").text = "4001122301"
+session.findById("wnd[0]/tbar[1]/btn[8]").press

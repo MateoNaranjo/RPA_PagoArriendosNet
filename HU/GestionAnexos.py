@@ -2,6 +2,7 @@ import time
 import logging
 import threading
 import pyautogui
+import re
 from pywinauto import Desktop
 
 class GestionAnexos:
@@ -9,14 +10,41 @@ class GestionAnexos:
         self.sesion = sap_conexion.sesion
         self.logger = logging.getLogger("main_proceso_masivo")
 
-    def _interaccion_ventana_windows(self, ruta_archivo, ventana):
+    def ventana_abierta(self, titulo_parcial):
+        """
+        Verifica si existe una ventana abierta cuyo título contenga el texto indicado.
+    
+        Args:
+            session: sesión activa SAP GUI
+            titulo_parcial (str): texto a buscar en el título (case-insensitive)
+    
+        Returns:
+            bool
+        """
+    
+        titulo_parcial = titulo_parcial.lower()
+    
+        for wnd in self.sesion.Children:
+            try:
+                if titulo_parcial in wnd.Text.lower():
+                    return True
+            except Exception:
+                pass
+    
+        return False
+
+    def _interaccion_ventana_windows(self, ruta_archivo, titulo_ventana):
         """
         Maneja la ventana externa 'Import file' inyectando la ruta y dando Enter.
         """
-        self.logger.info("Hilo secundario: Vigilando ventana 'Import file'...")
+        self.logger.info(f"Hilo secundario: Vigilando ventana '{titulo_ventana}'...")
         inicio = time.time()
         timeout = 20
-        
+
+        desktop = Desktop(backend="win32")
+        titulo = rf"(?i){re.escape(titulo_ventana)}"
+        ventana = desktop.window(title_re=titulo)
+
         while (time.time() - inicio) < timeout:
             try:
                 
@@ -36,8 +64,8 @@ class GestionAnexos:
                     time.sleep(1)
                     if ventana.exists():
                         pyautogui.press('enter')
-                    
                     self.logger.info("Hilo secundario: Ventana de Windows procesada.")
+
                     return
             except:
                 pass
@@ -56,9 +84,8 @@ class GestionAnexos:
             time.sleep(1)
 
             # 2. LANZAR HILO PARA VENTANA DE WINDOWS
-            desktop = Desktop(backend="win32")
-            ventana = desktop.window(title_re="(?i)Import.*file.*")
-            hilo_externo = threading.Thread(target=self._interaccion_ventana_windows, args=(ruta_archivo, ventana,))
+            titulo = "Import file"
+            hilo_externo = threading.Thread(target=self._interaccion_ventana_windows, args=(ruta_archivo, titulo,))
             hilo_externo.daemon = True
             hilo_externo.start()
 

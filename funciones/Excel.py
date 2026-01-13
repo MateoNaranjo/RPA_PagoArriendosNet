@@ -26,89 +26,60 @@ class Excel:
         valor = valor.replace("\n", " ").replace("\r", " ")
         return valor.strip()
 
-    COLUMN_MAP = {
-        "cod_fin": "cod_fin",
-        "nit": "nit",
-        "orden_2025": "orden_2025",
-        "mts2_segun_contrato": "mts2",
-        "iva": "iva",
-        "tipo": "tipo",
-        "enero": "enero",
-        "febrero": "febrero",
-        "marzo": "marzo",
-        "abril": "abril",
-        "mayo": "mayo",
-        "junio": "junio",
-        "julio": "julio",
-        "agosto": "agosto",
-        "septiembre": "septiembre",
-        "actubre": "octubre",
-        "noviembre": "noviembre",
-        "diciembre": "diciembre",
-        "observacion_de_pagos": "observaciones",
-        "no_de_contratro": "numero_contrato",
-        "no_de_contrato": "numero_contrato",
-        "nombre_facturador": "nombre_facturador"
-    }
-
-    def excel_a_csv(ruta_excel: str) -> str:
+    def excel_a_csv(ruta_excel: str, orden_final: list, column_map: dict, header: int) -> str:
         warnings.filterwarnings(
             "ignore",
             category=UserWarning,
             module="openpyxl"
         )
 
-        # leer excel
-        df = pd.read_excel(
-            ruta_excel,
-            header=3,
-            dtype=str,
-            engine="openpyxl"
-        )
+        try:
+            # leer excel
+            df = pd.read_excel(
+                ruta_excel,
+                header=header,
+                dtype=str,
+                engine="openpyxl"
+            )
 
-        # normalizar headers
-        df.columns = [Excel.normalize_column(c) for c in df.columns]
+            # normalizar headers
+            df.columns = [Excel.normalize_column(c) for c in df.columns]
 
-        # filtrar solo columnas necesarias (las que existan)
-        columnas_presentes = {}
-        for col in df.columns:
-            if col in Excel.COLUMN_MAP:
-                columnas_presentes[col] = Excel.COLUMN_MAP[col]
+            # filtrar solo columnas necesarias (las que existan)
+            columnas_presentes = {}
+            for col in df.columns:
+                if col in column_map:
+                    columnas_presentes[col] = column_map[col]
+            
+            if not columnas_presentes:
+                raise ValueError("No se encontró ninguna columna esperada en el Excel")
 
-        if not columnas_presentes:
-            raise ValueError("No se encontró ninguna columna esperada en el Excel")
+            df = df[list(columnas_presentes.keys())]
+            df = df.rename(columns=columnas_presentes)
 
-        df = df[list(columnas_presentes.keys())]
-        df = df.rename(columns=columnas_presentes)
+            # asegurar orden final
+            df = df.reindex(columns=orden_final)
 
-        # asegurar orden final
-        orden_final = [
-            "cod_fin", "nit", "orden_2025", "mts2", "iva", "tipo",
-            "enero", "febrero", "marzo", "abril", "mayo", "junio",
-            "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
-            "observaciones", "numero_contrato", "nombre_facturador"
-        ]
+            # limpiar contenido
+            df = df.map(Excel.limpiar_texto)
 
-        df = df.reindex(columns=orden_final)
+            # exportar CSV limpio
+            nombre_base= os.path.splitext(os.path.basename(ruta_excel))[0]
+            carpeta_temp= in_config("PathTemp")
+            ruta_csv = os.path.join(carpeta_temp, f"{nombre_base}.csv")
+        
+            df.to_csv(
+                ruta_csv,
+                sep=";",
+                index=False,
+                encoding="utf-8-sig"
+            )
 
-        # limpiar contenido
-        df = df.map(Excel.limpiar_texto)
+            print(f"CSV generado correctamente en: {ruta_csv}")
 
-        # exportar CSV limpio
-        nombre_base= os.path.splitext(os.path.basename(ruta_excel))[0]
-        carpeta_temp= in_config("PathTemp")
-        ruta_csv = os.path.join(carpeta_temp, f"{nombre_base}.csv")
-    
-        df.to_csv(
-            ruta_csv,
-            sep=";",
-            index=False,
-            encoding="utf-8-sig"
-        )
-
-        print(f"CSV generado correctamente en: {ruta_csv}")
-
-        return ruta_csv
+            return ruta_csv
+        except Exception as e:
+            print("Error al generar el csv:", e)
 
     def sanitize_text(value: str) -> str:
         if value is None:
@@ -174,7 +145,7 @@ class Excel:
             return True
 
     @staticmethod
-    def ejecutar_bulk(ruta_excel: str):
+    def ejecutar_bulk(ruta_excel: str, tabla: str, columnas: dict, orden_final: list, column_map: dict, header: int):
         nombre_base= os.path.splitext(os.path.basename(ruta_excel))[0]
         carpeta_temp= in_config("PathTemp")
         ruta_txt = os.path.join(carpeta_temp, f"{nombre_base}.txt")
@@ -183,12 +154,12 @@ class Excel:
             os.remove(ruta_txt)
         
         try:
-            ruta_csv = Excel.excel_a_csv(ruta_excel)
+            ruta_csv = Excel.excel_a_csv(ruta_excel, orden_final, column_map, header)
             Excel.convertirTxt(ruta_csv)
-            ExcelRepo.ejecutar_bulk(ruta_txt)
+            ExcelRepo.ejecutar_bulk(ruta_txt, tabla, columnas)
         
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"Error al ejecutar el bulk: {e}")
             raise
         
         finally:
