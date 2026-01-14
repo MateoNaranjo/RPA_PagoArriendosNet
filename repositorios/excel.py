@@ -144,7 +144,7 @@ class Excel:
     def obtener_datos_por_posicion(tabla: str):
 
         query = f"""
-        SELECT TOP 36 *
+        SELECT TOP 3 *
         FROM PagoArriendos.{tabla}
         WHERE Estado = 'Pendiente'
             AND OC IS NOT NULL

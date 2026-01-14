@@ -25,7 +25,7 @@ class ME80FN:
         except Exception as e:
             self.logger.info(f"Error al entrar a repartos: {e}")   
     
-    def exportar_tabla(self, ruta_archivo):
+    def exportar_tabla(self, ruta_archivo, nombre: str):
         titulo = "Save As"
         cargador = GestionAnexos(self)
 
@@ -35,9 +35,15 @@ class ME80FN:
             hilo_externo.daemon = True
             hilo_externo.start()
 
-            self.sesion.findById("wnd[0]/usr/cntlMEALV_GRID_CONTROL_80FN_EINT/shellcont/shell").pressToolbarContextButton("&MB_EXPORT")    
-            self.sesion.findById("wnd[0]/usr/cntlMEALV_GRID_CONTROL_80FN_EINT/shellcont/shell").selectContextMenuItem("&XXL")
+            if nombre == "cabecera":
+                self.sesion.findById("wnd[0]/usr/cntlMEALV_GRID_CONTROL_80FN/shellcont/shell").pressToolbarContextButton("&MB_EXPORT")
+                self.sesion.findById("wnd[0]/usr/cntlMEALV_GRID_CONTROL_80FN/shellcont/shell").selectContextMenuItem("&XXL")
+                print("Exportando la cabecera")
 
+            elif nombre == "repartos": 
+                self.sesion.findById("wnd[0]/usr/cntlMEALV_GRID_CONTROL_80FN_EINT/shellcont/shell").pressToolbarContextButton("&MB_EXPORT")    
+                self.sesion.findById("wnd[0]/usr/cntlMEALV_GRID_CONTROL_80FN_EINT/shellcont/shell").selectContextMenuItem("&XXL")
+                print("Exportando Repartos")
             
         except Exception as e:
             print("Error al exportar la tabla en la ME80FN", e)

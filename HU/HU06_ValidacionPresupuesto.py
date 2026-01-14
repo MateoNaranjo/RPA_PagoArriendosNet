@@ -195,10 +195,15 @@ def HU01_Prueba():
             me80fn = ME80FN(sap)
             me80fn.ingresar_oc(registro["Orden2025"])
             time.sleep(2)
-            #me80fn.exportar_tabla(ruta_cabecera)
+            me80fn.exportar_tabla(ruta_cabecera, "cabecera")
+            time.sleep(3)
+            os.system("taskkill /f /im excel.exe")
+            time.sleep(5)
             me80fn.entrar_repartos()
-            print(ruta_repartos)
-            me80fn.exportar_tabla(ruta_repartos)
+            me80fn.exportar_tabla(ruta_repartos, "repartos")
+            time.sleep(3)
+            os.system("taskkill /f /im excel.exe")
+            time.sleep(5)
             # Operaciones con los excel
             try:
                 cabecera = pd.read_excel(ruta_cabecera, header=None)
@@ -285,25 +290,31 @@ def HU01_Prueba():
                 print("Error en combinar columnas", e)
 
             
-            for i in range(3):
-                DatosME80FN = ExcelRepo.obtener_valores(tabla_me80fn)
-                DatosME2L = ExcelRepo.obtener_valores(tabla_me2l)
 
-                for d, datome2l in zip(DatosME80FN, DatosME2L):
-                    print("ValorNeto ME80FN:", d["ValorNeto"])
-                    print("ValorNeto ME2L:", datome2l["ValorNeto"])
+            DatosME80FN = ExcelRepo.obtener_valores(tabla_me80fn)
+            DatosME2L = ExcelRepo.obtener_valores(tabla_me2l)
 
-                    if d["ValorNeto"] == datome2l["ValorNeto"]:
-                        print("Coinciden")
-                    else:
-                        print("No coinciden")
+            for d, datome2l in zip(DatosME80FN, DatosME2L):
+                print("ValorNeto ME80FN:", d["ValorNeto"])
+                print("ValorNeto ME2L:", datome2l["ValorNeto"])
+
+                if d["ValorNeto"] == datome2l["ValorNeto"]:
+                    print("Coinciden")
+                else:
+                    print("No coinciden")
 
             # Finaliza proceso de operaciones
-            if os.path.exists(ruta_cabecera) and os.path.exists(ruta_repartos):              
+            if os.path.exists(ruta_cabecera) and os.path.exists(ruta_repartos) and os.path.exists(ruta_archivo) and os.path.exists(ruta_tabla_final) :              
                 os.remove(ruta_cabecera)
                 os.remove(ruta_repartos)
-            
-            sap.MenuPrincipal()
+                os.remove(ruta_archivo)
+                os.remove(ruta_tabla_final)
+                print("Archivos temporales eliminados")
+
+            print("Finalizacion del proceso el registro con oc:", registro["Orden2025"])
+
+            for i in range(2):
+                sap.MenuPrincipal()
 
         # ============================= Finalizacion HU =============================
 
@@ -317,8 +328,9 @@ def HU01_Prueba():
         # WriteLog()
         # GestionTicketInsumo(id, observaciones, estado, maquina)
         control_hu(task_name, 99)
-        Estado = 99
-        return Estado
+        # Estado = 99
+        # return Estado
+        raise
 
     finally:
         # WriteLog()
