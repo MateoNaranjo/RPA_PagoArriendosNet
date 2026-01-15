@@ -3,85 +3,160 @@ from config.database import Database
 class Excel:
 
     @staticmethod
-    def CrearTablaBM():
-        query = """
-        DROP TABLE IF EXISTS PagoArriendos.BaseMedicamentos
+    def construir_columnas(columnas: dict) -> str:
+        return ",\n".join(
+            f"{nombre} {tipo} NULL"
+            for nombre, tipo in columnas.items()
+        )
 
-        CREATE TABLE PagoArriendos.BaseMedicamentos (
-            CodFin              VARCHAR(100) NULL,
-            NIT                 VARCHAR(100) NULL,
-            Orden2025           VARCHAR(MAX) NULL,
-            MTS2                VARCHAR(100) NULL,
-            IVA                 VARCHAR(100) NULL,
-            Tipo				VARCHAR(100) NULL,
-            Enero               VARCHAR(100) NULL,
-            Febrero             VARCHAR(100) NULL,
-            Marzo               VARCHAR(100) NULL,
-            Abril               VARCHAR(100) NULL,
-            Mayo                VARCHAR(100) NULL,
-            Junio               VARCHAR(100) NULL,
-            Julio               VARCHAR(100) NULL,
-            Agosto              VARCHAR(100) NULL,
-            Septiembre          VARCHAR(100) NULL,
-            Octubre             VARCHAR(100) NULL,
-            Noviembre           VARCHAR(100) NULL,
-            Diciembre            VARCHAR(100) NULL,
-            Observaciones       VARCHAR(300) NULL,
-            NumeroContrato      VARCHAR(300) NULL,
-            NombreFacturador    VARCHAR(MAX) NULL
+    # -----------------------------
+    # CREAR TABLA TEMPORAL
+    # -----------------------------
+    @staticmethod
+    def crear_tabla_temp(tabla: str, columnas: dict) -> bool:
+        tabla_temp = f"{tabla}Temp"
+        columnas_sql = Excel.construir_columnas(columnas)
+
+        query = f"""
+        IF OBJECT_ID('PagoArriendos.{tabla_temp}', 'U') IS NOT NULL
+            DROP TABLE PagoArriendos.{tabla_temp};
+
+        CREATE TABLE PagoArriendos.{tabla_temp} (
+            {columnas_sql}
         );
         """
+
         try:
             with Database.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(query)
+                conn.commit()
                 cursor.close()
+            return True
 
-                return True
         except Exception as e:
-            print(f"Error al crear la tabla: {e}")
-            
+            print(f"Error al crear tabla temporal {tabla_temp}: {e}")
             return False
-        
-    @staticmethod
-    def ejecutar_bulk(ruta_txt: str):
-        
-        # Excel.CrearTablaBM()
 
-        query=f"""
-            BULK INSERT PagoArriendos.BaseMedicamentos
-            FROM '{ruta_txt}'
-            WITH (
-                FIRSTROW = 2,
-                FIELDTERMINATOR = ';',
-                ROWTERMINATOR = '0x0a',
-                CODEPAGE = '65001',        
-                TABLOCK
-            )
-            """
-        with Database.get_connection() as conn:
-            conn.autocommit = True,
-            cursor = conn.cursor()
-            try:
+    # -----------------------------
+    # CREAR TABLA FINAL
+    # -----------------------------
+    @staticmethod
+    def crear_tabla_final(tabla: str, columnas: dict) -> bool:
+        columnas_sql = Excel.construir_columnas(columnas)
+
+        query = f"""
+        IF OBJECT_ID('PagoArriendos.{tabla}', 'U') IS NOT NULL
+            DROP TABLE PagoArriendos.{tabla};
+
+        CREATE TABLE PagoArriendos.{tabla} (
+            {columnas_sql},
+            Estado VARCHAR(100) NOT NULL DEFAULT 'Pendiente'
+        );
+        """
+
+        try:
+            with Database.get_connection() as conn:
+                cursor = conn.cursor()
                 cursor.execute(query)
-                print("Consulta ejecutada correctamente")
-                cursor.commit()
+                conn.commit()
                 cursor.close()
+            return True
 
-            except Exception as e:
-                print(f"Error al realizar el BULK: {e}")
-                cursor.close()
+        except Exception as e:
+            print(f"Error al crear tabla final {tabla}: {e}")
+            return False
 
+    # -----------------------------
+    # BULK + TRANSFERENCIA
+    # -----------------------------
     @staticmethod
-    def obtener_valores():
-        query="""
-        SELECT TOP 10 * FROM PagoArriendos.BaseMedicamentos
+    def ejecutar_bulk(ruta_txt: str, tabla: str, columnas: dict):
+
+        tabla_temp = f"{tabla}Temp"
+
+        if not Excel.crear_tabla_temp(tabla, columnas):
+            return
+
+        bulk_query = f"""
+        BULK INSERT PagoArriendos.{tabla_temp}
+        FROM '{ruta_txt}'
+        WITH (
+            FIRSTROW = 2,
+            FIELDTERMINATOR = ';',
+            ROWTERMINATOR = '0x0a',
+            CODEPAGE = '65001',
+            TABLOCK
+        );
+        """
+
+        columnas_sql = ", ".join(columnas.keys())
+
+        insert_query = f"""
+        INSERT INTO PagoArriendos.{tabla} ({columnas_sql}, Estado)
+        SELECT {columnas_sql}, 'Pendiente'
+        FROM PagoArriendos.{tabla_temp};
+        """
+
+        drop_temp_query = f"""
+        DROP TABLE PagoArriendos.{tabla_temp};
+        """
+
+        try:
+            with Database.get_connection() as conn:
+                conn.autocommit = True
+                cursor = conn.cursor()
+
+                Excel.crear_tabla_final(tabla, columnas)
+                cursor.execute(bulk_query)
+                cursor.execute(insert_query)
+                cursor.execute(drop_temp_query)
+
+                cursor.close()
+
+            print("Carga BULK ejecutada correctamente")
+
+        except Exception as e:
+            print(f"Error durante la ejecución del BULK: {e}")
+
+    # -----------------------------
+    # OBTENER SOLO PENDIENTES
+    # -----------------------------
+    @staticmethod
+    def obtener_valores(tabla: str):
+
+        query = f"""
+        SELECT TOP 8 *
+        FROM PagoArriendos.{tabla}
+        WHERE Estado = 'Pendiente'
         """
 
         with Database.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query)
-            column = [col[0] for col in cursor.description]
-            rows = cursor.fetchall()
 
-            return [dict(zip(column, fila)) for fila in rows]
+            columnas = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            cursor.close()
+
+            return [dict(zip(columnas, fila)) for fila in rows]
+        
+    def obtener_datos_por_posicion(tabla: str):
+
+        query = f"""
+        SELECT *
+        FROM PagoArriendos.{tabla}
+        WHERE Estado = 'Pendiente'
+            AND OC IS NOT NULL
+        ORDER BY Posicion
+        """
+
+        with Database.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query)
+
+            columnas = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+            cursor.close()
+
+            return [dict(zip(columnas, fila)) for fila in rows]

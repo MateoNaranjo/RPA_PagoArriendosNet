@@ -26,6 +26,13 @@ RUTAS = {
     'PATH_RESULTADO': os.getenv('PATH_RESULTADO', 'C:/ProgramData/RIGO/Resultado')
 }
 
+CONFIG_EMAIL = {
+    "stmp_server": "smtp.office365.com",
+    "smtp_port": 587,
+    "email" : "santiago.pinzon@netapplications.com.co",
+    "password": os.getenv('PASSWORD_EMAIL')
+}
+
 # Configuración del proceso
 PROCESO_CONFIG = {
     'DIAS_ESPERA_LIBERACION': 2,
