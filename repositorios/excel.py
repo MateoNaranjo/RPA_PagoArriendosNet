@@ -126,7 +126,7 @@ class Excel:
     def obtener_valores(tabla: str):
 
         query = f"""
-        SELECT TOP 2 *
+        SELECT TOP 8 *
         FROM PagoArriendos.{tabla}
         WHERE Estado = 'Pendiente'
         """
@@ -144,7 +144,7 @@ class Excel:
     def obtener_datos_por_posicion(tabla: str):
 
         query = f"""
-        SELECT TOP 3 *
+        SELECT *
         FROM PagoArriendos.{tabla}
         WHERE Estado = 'Pendiente'
             AND OC IS NOT NULL

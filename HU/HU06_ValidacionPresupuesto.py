@@ -117,7 +117,7 @@ def HU01_Prueba():
 
                 TablaBase = ExcelRepo.obtener_valores("BaseMedicamentos")
 
-        for registro in TablaBase:
+        for registro in TablaBase[6:]:
             sap.abrir_transaccion("ME2L")
             me2l = TransaccionME2L(sap)
             me2l.BuscarPorOC(registro["Orden2025"])
@@ -291,8 +291,8 @@ def HU01_Prueba():
 
             
 
-            DatosME80FN = ExcelRepo.obtener_valores(tabla_me80fn)
-            DatosME2L = ExcelRepo.obtener_valores(tabla_me2l)
+            DatosME80FN = ExcelRepo.obtener_datos_por_posicion(tabla_me80fn)
+            DatosME2L = ExcelRepo.obtener_datos_por_posicion(tabla_me2l)
 
             for d, datome2l in zip(DatosME80FN, DatosME2L):
                 print("ValorNeto ME80FN:", d["ValorNeto"])
