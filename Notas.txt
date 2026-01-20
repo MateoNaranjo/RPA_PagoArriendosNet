@@ -22,3 +22,8 @@ ORDEN DE COMPRA 2024
 4001112445
 4001112446
 4001112446
+
+
+INSERT INTO PagoArriendos.ParametrosDeCorreo (CodEmailParameter, TOEmailParameter, CCEmailParatemeter, AsuntoEmailParameter, 
+BodyEmailParameter, IsHTMLEmailParameter) VALUES ('1','steven.navarro@netapplications.com.co','santiago.pinzon@netapplications.com.co','NOTIFICACION RIGO - Inicio de ejecución asistente digital RIGO - Inicio Ejecución ','El asistente digital ha realizado exitosamente la ejecución del proceso Cargue de pago a compradores HU00 -Despliegue de ambiente y creación de las tablas en bases de datos.','1')
+ 

@@ -54,7 +54,7 @@ class EmailCorreos:
         with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
             server.starttls()
             server.login(self.email, self.password)
-            server.sendmail(self.email, destinatarios, msg.as_string)
+            server.sendmail(self.email, destinatarios, msg.as_string())
 
     
     def EnviarCorreoCod(self, cod_email):

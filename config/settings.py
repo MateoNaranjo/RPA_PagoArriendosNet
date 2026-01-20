@@ -27,7 +27,7 @@ RUTAS = {
 }
 
 CONFIG_EMAIL = {
-    "stmp_server": "smtp.office365.com",
+    "smtp_server": "smtp.office365.com",
     "smtp_port": 587,
     "email" : "santiago.pinzon@netapplications.com.co",
     "password": os.getenv('PASSWORD_EMAIL')

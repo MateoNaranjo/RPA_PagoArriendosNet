@@ -6,13 +6,15 @@ class CorreosRepo:
     @staticmethod
     def ObtenerParametrosCorreo(cod_email: int):
 
-        query = """"
-            SELECT * FROM PagoArriendos.ParametrosCorreo WHERE CodEmailParamter = ?
+        query = """
+            SELECT * 
+            FROM PagoArriendos.ParametrosDeCorreo
+            WHERE CodEmailParameter = ? 
         """
 
         with Database.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(query, cod_email)
+            cursor.execute(query, (cod_email,))
             fila = cursor.fetchone()
 
             if not fila:
