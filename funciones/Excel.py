@@ -1,170 +1,206 @@
-from config.init_config import in_config
-from repositorios.excel import Excel as ExcelRepo
-import pandas as pd
-import csv
 import os
-import unicodedata
+import csv
 import re
+import unicodedata
 import warnings
+import pandas as pd
 
-class Excel:
+from config.init_config import in_config
+from repositorios.excel import ExcelRepo
 
-    def normalize_column(col) -> str:
-        col = str(col)
-        col = col.strip().lower()
-        col = unicodedata.normalize("NFKD", col)
-        col = col.encode("ascii", "ignore").decode("utf-8")
-        col = col.replace(" ", "_").replace(".", "")
-        return col
 
+class ExcelService:
+
+    @staticmethod
+    def limpiar_excel(
+        ruta_entrada: str,
+        columnas_mapeo: dict,
+        hoja: str | int = 0,
+        header: int = 0
+    ) -> str:
+        """
+        Limpia un archivo Excel dejando solo las columnas requeridas,
+        las renombra y guarda el resultado en un archivo nuevo.
+
+        :param ruta_entrada: Ruta del archivo Excel original
+        :param ruta_salida: Ruta donde se guardará el Excel limpio
+        :param columnas_mapeo: Diccionario {col_original: col_final}
+        :param hoja: Nombre o índice de la hoja (default 0)
+        """
+        nombre_archivo = os.path.splitext(os.path.basename(ruta_entrada))[0]
+
+        # Leer archivo
+        df = pd.read_excel(ruta_entrada, sheet_name=hoja, header=header)
+
+        # Normalizar nombres de columnas
+        df.columns = [ExcelService.normalize_column(c) for c in df.columns]
+
+        # Columnas que realmente existen en el Excel
+        columnas_existentes = [
+            col for col in columnas_mapeo.keys() if col in df.columns
+        ]
+
+        # Advertencia si faltan columnas
+        columnas_faltantes = set(columnas_mapeo.keys()) - set(columnas_existentes)
+        if columnas_faltantes:
+            print(f"Advertencia: columnas faltantes -> {columnas_faltantes}")
+
+        # Filtrar columnas necesarias
+        df_limpio = df[columnas_existentes]
+
+        # Renombrar columnas
+        df_limpio = df_limpio.rename(columns=columnas_mapeo)
+
+        # Guardar archivo limpio
+        ruta_salida=in_config("PathTemp")+f"\{nombre_archivo}Limpio.xlsx"
+        df_limpio.to_excel(ruta_salida, index=False)
+
+        print(f"Archivo limpio generado correctamente en: {ruta_salida}")
+
+        return ruta_salida
+
+
+    # -----------------------------
+    # NORMALIZACIÓN DE NOMBRES
+    # -----------------------------
+    @staticmethod
+    def normalize_column(nombre: str) -> str:
+        nombre = nombre.strip().lower()
+        nombre = unicodedata.normalize('NFKD', nombre).encode('ascii', 'ignore').decode()
+        nombre = re.sub(r'[^\w]', '_', nombre)
+        nombre = re.sub(r'_+', '_', nombre)
+        return nombre
+
+    # -----------------------------
+    # LIMPIEZA DE DATOS
+    # -----------------------------
+    @staticmethod
     def limpiar_texto(valor):
         if pd.isna(valor):
             return ""
         valor = str(valor)
-        valor = re.sub(r"[\x00-\x1F\x7F]", "", valor)
-        valor = valor.replace("\u00A0", " ")
-        valor = valor.replace("\n", " ").replace("\r", " ")
-        return valor.strip()
+        valor = unicodedata.normalize("NFKC", valor)
+        valor = re.sub(r"[\x00-\x1F\x7F]", " ", valor)
+        return valor.replace("\n", " ").replace("\r", " ").strip()
 
-    def excel_a_csv(ruta_excel: str, orden_final: list, column_map: dict, header: int) -> str:
-        warnings.filterwarnings(
-            "ignore",
-            category=UserWarning,
-            module="openpyxl"
-        )
-
-        try:
-            # leer excel
-            df = pd.read_excel(
-                ruta_excel,
-                header=header,
-                dtype=str,
-                engine="openpyxl"
-            )
-
-            # normalizar headers
-            df.columns = [Excel.normalize_column(c) for c in df.columns]
-
-            # filtrar solo columnas necesarias (las que existan)
-            columnas_presentes = {}
-            for col in df.columns:
-                if col in column_map:
-                    columnas_presentes[col] = column_map[col]
-            
-            if not columnas_presentes:
-                raise ValueError("No se encontró ninguna columna esperada en el Excel")
-
-            df = df[list(columnas_presentes.keys())]
-            df = df.rename(columns=columnas_presentes)
-
-            # asegurar orden final
-            df = df.reindex(columns=orden_final)
-
-            # limpiar contenido
-            df = df.map(Excel.limpiar_texto)
-
-            # exportar CSV limpio
-            nombre_base= os.path.splitext(os.path.basename(ruta_excel))[0]
-            carpeta_temp= in_config("PathTemp")
-            ruta_csv = os.path.join(carpeta_temp, f"{nombre_base}.csv")
-        
-            df.to_csv(
-                ruta_csv,
-                sep=";",
-                index=False,
-                encoding="utf-8-sig"
-            )
-
-            print(f"CSV generado correctamente en: {ruta_csv}")
-
-            return ruta_csv
-        except Exception as e:
-            print("Error al generar el csv:", e)
-
+    @staticmethod
     def sanitize_text(value: str) -> str:
         if value is None:
             return "NULL"
-
-        value = str(value)
-
-        # Normalizar Unicode
-        value = unicodedata.normalize("NFKC", value)
-
-        # Remover BOM
-        value = value.replace("\ufeff", "")
-
-        # Reemplazar espacios invisibles por espacio normal
-        value = value.replace("\u00A0", " ")
-        value = value.replace("\u2009", " ")
-        value = value.replace("\u202F", " ")
-
-        # Eliminar caracteres de control (incluye CR y LF)
+        value = unicodedata.normalize("NFKC", str(value))
         value = re.sub(r"[\x00-\x1F\x7F]", " ", value)
-
-        # Quitar comillas
         value = value.replace('"', "").strip()
-
-        # Si queda vacío → NULL
         return value if value else "NULL"
 
-    def convertirTxt(csv_path: str) -> bool:
-        try:
-            if not os.path.exists(csv_path):
-                return True
-
-            txt_path = os.path.splitext(csv_path)[0] + ".txt"
-
-            if os.path.exists(txt_path):
-                os.remove(txt_path)
-
-            with open(csv_path, "r", encoding="latin1", newline="") as csv_file, \
-                open(txt_path, "w", encoding="utf-8", newline="\n") as txt_file:
-
-                reader = csv.reader(csv_file)
-
-                for raw_row in reader:
-                    # Sanitizar cada campo
-                    cleaned_row = [Excel.sanitize_text(field) for field in raw_row]
-
-                    # Si la fila está vacía → ignorar
-                    if all(f == "NULL" for f in cleaned_row):
-                        continue
-
-                    # Garantizar que no existan saltos de línea dentro de los campos
-                    cleaned_row = [f.replace("\r", " ").replace("\n", " ") for f in cleaned_row]
-
-                    # Forzar línea terminada únicamente en \n
-                    line = ";".join(cleaned_row)
-
-                    txt_file.write(line + "\n")
-
-            return False
-
-        except Exception as e:
-            print("Error durante limpieza:", e)
-            return True
-
+    # -----------------------------
+    # OBTENER COLUMNAS DEL EXCEL
+    # -----------------------------
     @staticmethod
-    def ejecutar_bulk(ruta_excel: str, tabla: str, columnas: dict, orden_final: list, column_map: dict, header: int):
-        nombre_base= os.path.splitext(os.path.basename(ruta_excel))[0]
-        carpeta_temp= in_config("PathTemp")
-        ruta_txt = os.path.join(carpeta_temp, f"{nombre_base}.txt")
+    def obtener_columnas_excel(ruta_excel: str, header: int) -> list[str]:
+        df = pd.read_excel(
+            ruta_excel,
+            header=header,
+            nrows=0,
+            engine="openpyxl"
+        )
+        return [ExcelService.normalize_column(c) for c in df.columns]
 
-        if os.path.exists(ruta_txt):
-            os.remove(ruta_txt)
-        
+    # -----------------------------
+    # EXCEL → CSV
+    # -----------------------------
+    @staticmethod
+    def excel_a_csv(ruta_excel: str, header: int) -> tuple[str, list]:
+
+        warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
+
+        df = pd.read_excel(
+            ruta_excel,
+            header=header,
+            dtype=str,
+            engine="openpyxl"
+        )
+
+        df.columns = [ExcelService.normalize_column(c) for c in df.columns]
+        orden_columnas = list(df.columns)
+
+        df = df.map(ExcelService.limpiar_texto)
+
+        nombre_base = os.path.splitext(os.path.basename(ruta_excel))[0]
+        carpeta_temp = in_config("PathTemp")
+        ruta_csv = os.path.join(carpeta_temp, f"{nombre_base}.csv")
+
+        df.to_csv(
+            ruta_csv,
+            sep=";",
+            index=False,
+            encoding="utf-8-sig"
+        )
+
+        return ruta_csv, orden_columnas
+
+    # -----------------------------
+    # CSV → TXT
+    # -----------------------------
+    @staticmethod
+    def convertir_txt(csv_path: str) -> str:
+
+        txt_path = os.path.splitext(csv_path)[0] + ".txt"
+
+        with open(csv_path, "r", encoding="latin1", newline="") as csv_file, \
+             open(txt_path, "w", encoding="utf-8", newline="\n") as txt_file:
+
+            reader = csv.reader(csv_file)
+
+            for row in reader:
+                cleaned = [ExcelService.sanitize_text(v) for v in row]
+
+                if all(v == "NULL" for v in cleaned):
+                    continue
+
+                txt_file.write(";".join(cleaned) + "\n")
+
+        return txt_path
+
+    # -----------------------------
+    # ORQUESTADOR FINAL
+    # -----------------------------
+    @staticmethod
+    def ejecutar_bulk_desde_excel(ruta_excel: str, header: int = 0):
+        """
+        Punto único de entrada:
+        - El Excel define columnas
+        - El nombre del archivo define la tabla
+        """
+
+        nombre_tabla = ExcelService.normalize_column(
+            os.path.splitext(os.path.basename(ruta_excel))[0]
+        )
+
+        ruta_csv = None
+        ruta_txt = None
+
         try:
-            ruta_csv = Excel.excel_a_csv(ruta_excel, orden_final, column_map, header)
-            Excel.convertirTxt(ruta_csv)
-            ExcelRepo.ejecutar_bulk(ruta_txt, tabla, columnas)
-        
-        except Exception as e:
-            print(f"Error al ejecutar el bulk: {e}")
-            raise
-        
-        finally:
-            if os.path.exists(ruta_txt):
-                os.remove(ruta_txt)
+            # 1. Columnas (orden exacto del Excel)
+            orden_columnas = ExcelService.obtener_columnas_excel(ruta_excel, header)
 
-            if os.path.exists(ruta_csv):
-                os.remove(ruta_csv)
+            # 2. Excel → CSV
+            ruta_csv, orden_columnas = ExcelService.excel_a_csv(ruta_excel, header)
+
+            # 3. CSV → TXT
+            ruta_txt = ExcelService.convertir_txt(ruta_csv)
+
+            # 4. Bulk con tabla temporal + final
+            ExcelRepo.ejecutar_bulk_dinamico(
+                ruta_txt=ruta_txt,
+                tabla=nombre_tabla,
+                columnas=orden_columnas
+            )
+
+        except Exception as e:
+            print(f"Error ejecutando bulk desde Excel: {e}")
+            raise
+
+        finally:
+            for f in (ruta_csv, ruta_txt):
+                if f and os.path.exists(f):
+                    os.remove(f)

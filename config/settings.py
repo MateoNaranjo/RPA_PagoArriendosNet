@@ -51,3 +51,8 @@ DATABASE = {
     'DB_USER': os.getenv('DB_USER'),
     'DB_PASSWORD': os.getenv('DB_PASSWORD')
 }
+
+CADENA_CONFIG = {
+    'USUARIO': os.getenv('USUARIO_CADENA'),
+    'PASSWORD': os.getenv('PASSWORD_CADENA')
+}

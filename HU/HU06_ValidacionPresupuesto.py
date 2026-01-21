@@ -1,5 +1,5 @@
 # ===============================
-# HU01: Nombre HU
+# HU06: Validacion de presupuesto
 # Autor: Santiago Pinzon - Desarrollador RPA
 # Descripcion: Descripcion de la HU 
 # Ultima modificacion: 2/1/2026
@@ -13,11 +13,11 @@ from funciones.EscribirLog import WriteLog
 from HU.pagoArriendos import ConexionSAP
 from config.settings import SAP_CONFIG
 from config.init_config import in_config
-from HU.ME2L import TransaccionME2L
-from funciones.Excel import Excel
-from repositorios.excel import Excel as ExcelRepo
+from funciones.Excel import ExcelService
+from repositorios.excel import ExcelRepo
 from funciones.ME80FN import ME80FN
 import pandas as pd
+import warnings
 
 
 def HU01_Prueba():
@@ -32,6 +32,7 @@ def HU01_Prueba():
     try:
         # === Inicio HU01 ===
         control_hu(task_name, 0)
+        warnings.filterwarnings("ignore",category=UserWarning, module="openpyxl")
         # GestionTicketInsumo(estado, id, maquina, observaciones)
         # WriteLog(mensaje="Inicio HU01", estado="INFO", task_name=task_name)
         
@@ -44,10 +45,10 @@ def HU01_Prueba():
                         in_config('SAP_SISTEMA')
                     )
         sap.iniciar_sesion_sap()
-        ruta_excel = in_config("PathInsumos")+"\BaseMedicamentos.xlsx"
+        ruta_insumo = in_config("PathInsumos")+"\BaseMedicamentos.xlsx"
 
         try:
-            TablaBase = ExcelRepo.obtener_valores("BaseMedicamentos")
+            TablaBase = ExcelRepo.obtener_valores("BaseMedicamentosLimpio")
         except:
             
             columnas_medicamentos = {
@@ -74,117 +75,13 @@ def HU01_Prueba():
                 "nombre_facturador": "nombre_facturador"
             }
             
-            orden_final = [
-            "cod_fin", "nit", "orden_2025", "mts2", "iva", "tipo",
-            "enero", "febrero", "marzo", "abril", "mayo", "junio",
-            "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
-            "observaciones", "numero_contrato", "nombre_facturador"
-            ]
+            ruta_excel = ExcelService.limpiar_excel(ruta_insumo, columnas_medicamentos, header=3)
+            ExcelService.ejecutar_bulk_desde_excel(ruta_excel)
+            os.remove(ruta_excel)
 
-            COLUMNAS_BASE_MEDICAMENTOS = {
-                "CodFin": "VARCHAR(100)",
-                "NIT": "VARCHAR(100)",
-                "Orden2025": "VARCHAR(MAX)",
-                "MTS2": "VARCHAR(100)",
-                "IVA": "VARCHAR(100)",
-                "Tipo": "VARCHAR(100)",
-                "Enero": "VARCHAR(100)",
-                "Febrero": "VARCHAR(100)",
-                "Marzo": "VARCHAR(100)",
-                "Abril": "VARCHAR(100)",
-                "Mayo": "VARCHAR(100)",
-                "Junio": "VARCHAR(100)",
-                "Julio": "VARCHAR(100)",
-                "Agosto": "VARCHAR(100)",
-                "Septiembre": "VARCHAR(100)",
-                "Octubre": "VARCHAR(100)",
-                "Noviembre": "VARCHAR(100)",
-                "Diciembre": "VARCHAR(100)",
-                "Observaciones": "VARCHAR(300)",
-                "NumeroContrato": "VARCHAR(300)",
-                "NombreFacturador": "VARCHAR(MAX)"
-            }
-
-            if ruta_excel:
-                Excel.ejecutar_bulk(
-                    ruta_excel,
-                    "BaseMedicamentos",
-                    COLUMNAS_BASE_MEDICAMENTOS,
-                    orden_final,
-                    columnas_medicamentos,
-                    3
-                    )
-
-                TablaBase = ExcelRepo.obtener_valores("BaseMedicamentos")
+            TablaBase = ExcelRepo.obtener_valores("BaseMedicamentosLimpio")
 
         for registro in TablaBase[6:]:
-            sap.abrir_transaccion("ME2L")
-            me2l = TransaccionME2L(sap)
-            me2l.BuscarPorOC(registro["Orden2025"])
-
-            ruta_archivo = in_config("PathTemp")+"\ComprasNit.xlsx"
-            if os.path.exists(ruta_archivo):
-                os.remove(ruta_archivo)
-            me2l.exportar_tabla(ruta_archivo)
-            time.sleep(3)
-            os.system("taskkill /f /im excel.exe")
-            time.sleep(5)
-
-            """
-            Asignamos las columnas y datos para la ejecucion del bulk para la tabla de la transaccion ME2L
-            """
-
-            # ==============================
-            # CONFIGURACION BULK ME2L
-            # ==============================
-
-            df_me2l = pd.read_excel(ruta_archivo, header=None)
-            df_me2l = df_me2l.dropna(how="all").reset_index(drop=True)
-            df_me2l = df_me2l.rename(columns={
-                    0: "proveedor",
-                    2: "grupo_de_compras",
-                    5: "oc",
-                    11: "posicion",
-                    12: "material",
-                    13: "texto_breve",
-                    16: "valor_neto"
-                })
-            df_me2l.to_excel(ruta_archivo, index=False)
-
-            tabla_me2l = "TablaME2L"
-            orden_me2l = [
-                "proveedor", "grupo_de_compras", "oc", "posicion", "material",
-                "texto_breve", "valor_neto"
-            ]
-            columnas_me2l= {
-                "Proveedor": "VARCHAR(100)",
-                "GrupoCompras": "VARCHAR(100)",
-                "OC":"VARCHAR(100)",
-                "Posicion":"INT",
-                "Material": "VARCHAR(100)",
-                "TextoBreve":"VARCHAR(100)",
-                "ValorNeto":"VARCHAR(100)"
-            }
-
-            columnas_map_me2l= {
-                "proveedor": "proveedor",
-                "grupo_de_compras": "grupo_de_compras",
-                "oc": "oc",
-                "posicion": "posicion",
-                "material": "material",
-                "texto_breve": "texto_breve",
-                "valor_neto": "valor_neto"
-            }
-
-            Excel.ejecutar_bulk(
-                ruta_archivo,
-                tabla_me2l,
-                columnas_me2l, 
-                orden_me2l, 
-                columnas_map_me2l,
-                0
-                )
-
 
             ruta_cabecera= in_config("PathTemp")+"\cabecera.xlsx"
             ruta_repartos= in_config("PathTemp")+"\Reparto.xlsx"
@@ -193,7 +90,7 @@ def HU01_Prueba():
             sap.MenuPrincipal()
             sap.abrir_transaccion("ME80FN")
             me80fn = ME80FN(sap)
-            me80fn.ingresar_oc(registro["Orden2025"])
+            me80fn.ingresar_oc(registro["orden_2025"])
             time.sleep(2)
             me80fn.exportar_tabla(ruta_cabecera, "cabecera")
             time.sleep(3)
@@ -251,67 +148,28 @@ def HU01_Prueba():
                 print("Cruce completado")
 
                 # Se ejecuta el bulk en la base de datos
-                tabla_me80fn = "TablaME80FN"
-                orden_me80fn = [
-                    "oc", "posicion", "material", "descripcion", "proveedor",
-                    "grupo_de_compras", "valor_neto", "fecha_entrega"
-                ]
-                columnas_me80fn= {
-                    "OC": "VARCHAR(100)",
-                    "Posicion": "FLOAT",
-                    "Material": "VARCHAR(100)",
-                    "Descripcion":"VARCHAR(100)",
-                    "Proveedor":"VARCHAR(100)",
-                    "GrupoCompras":"VARCHAR(100)",
-                    "ValorNeto":"VARCHAR(100)",
-                    "FechaEntrega": "VARCHAR(100)"
-                }
-                columnas_mapeadas= {
-                    "oc": "oc",
-                    "posicion": "posicion",
-                    "material": "material",
-                    "descripcion": "descripcion",
-                    "proveedor": "proveedor",
-                    "grupo_de_compras": "grupo_de_compras",
-                    "valor_neto": "valor_neto",
-                    "fecha_entrega": "fecha_entrega"
-                }
-
-                Excel.ejecutar_bulk(
-                    ruta_tabla_final,
-                    tabla_me80fn,
-                    columnas_me80fn, 
-                    orden_me80fn, 
-                    columnas_mapeadas,
-                    0
-                    )
+                ExcelService.ejecutar_bulk_desde_excel(ruta_tabla_final)
                 
             except Exception as e:
                 print("Error en combinar columnas", e)
 
             
 
-            DatosME80FN = ExcelRepo.obtener_datos_por_posicion(tabla_me80fn)
-            DatosME2L = ExcelRepo.obtener_datos_por_posicion(tabla_me2l)
+            DatosME80FN = ExcelRepo.obtener_datos_por_posicion("valoresacomparar")
 
-            for d, datome2l in zip(DatosME80FN, DatosME2L):
-                print("ValorNeto ME80FN:", d["ValorNeto"])
-                print("ValorNeto ME2L:", datome2l["ValorNeto"])
+            for d in DatosME80FN:
 
-                if d["ValorNeto"] == datome2l["ValorNeto"]:
-                    print("Coinciden")
-                else:
-                    print("No coinciden")
+                print("Fecha de entrega: ",d["fecha_entrega"])
+
 
             # Finaliza proceso de operaciones
-            if os.path.exists(ruta_cabecera) and os.path.exists(ruta_repartos) and os.path.exists(ruta_archivo) and os.path.exists(ruta_tabla_final) :              
+            if os.path.exists(ruta_cabecera) and os.path.exists(ruta_repartos) and os.path.exists(ruta_tabla_final) :              
                 os.remove(ruta_cabecera)
                 os.remove(ruta_repartos)
-                os.remove(ruta_archivo)
                 os.remove(ruta_tabla_final)
                 print("Archivos temporales eliminados")
 
-            print("Finalizacion del proceso el registro con oc:", registro["Orden2025"])
+            print("Finalizacion del proceso el registro con oc:", registro["orden_2025"])
 
             for i in range(2):
                 sap.MenuPrincipal()

@@ -1,21 +1,31 @@
 from config.database import Database
 
-class Excel:
+class ExcelRepo:
 
+    # -----------------------------
+    # CREAR COLUMNAS DINÁMICAS
+    # -----------------------------
     @staticmethod
-    def construir_columnas(columnas: dict) -> str:
+    def _construir_columnas(columnas: list[str]) -> str:
         return ",\n".join(
-            f"{nombre} {tipo} NULL"
-            for nombre, tipo in columnas.items()
+            f"{col} VARCHAR(MAX) NULL"
+            for col in columnas
         )
 
     # -----------------------------
     # CREAR TABLA TEMPORAL
     # -----------------------------
     @staticmethod
-    def crear_tabla_temp(tabla: str, columnas: dict) -> bool:
-        tabla_temp = f"{tabla}Temp"
-        columnas_sql = Excel.construir_columnas(columnas)
+    def crear_tabla_temp(tabla: str, columnas: list[str]) -> bool:
+
+        tabla_temp = f"{tabla}_temp"
+        if not columnas:
+            raise ValueError("La lista de columnas está vacía")
+
+        columnas_sql = ",\n".join(
+            f"[{col}] NVARCHAR(MAX)"
+            for col in columnas
+        )
 
         query = f"""
         IF OBJECT_ID('PagoArriendos.{tabla_temp}', 'U') IS NOT NULL
@@ -32,18 +42,19 @@ class Excel:
                 cursor.execute(query)
                 conn.commit()
                 cursor.close()
+                print("Tabla temporal creada con exito")
             return True
-
         except Exception as e:
-            print(f"Error al crear tabla temporal {tabla_temp}: {e}")
+            print(f"Error creando tabla temporal {tabla_temp}: {e}")
             return False
 
     # -----------------------------
     # CREAR TABLA FINAL
     # -----------------------------
     @staticmethod
-    def crear_tabla_final(tabla: str, columnas: dict) -> bool:
-        columnas_sql = Excel.construir_columnas(columnas)
+    def crear_tabla_final(tabla: str, columnas: list[str]) -> bool:
+
+        columnas_sql = ExcelRepo._construir_columnas(columnas)
 
         query = f"""
         IF OBJECT_ID('PagoArriendos.{tabla}', 'U') IS NOT NULL
@@ -51,7 +62,7 @@ class Excel:
 
         CREATE TABLE PagoArriendos.{tabla} (
             {columnas_sql},
-            Estado VARCHAR(100) NOT NULL DEFAULT 'Pendiente'
+            EstadoRegistro VARCHAR(50) NOT NULL DEFAULT 'Pendiente'
         );
         """
 
@@ -60,23 +71,25 @@ class Excel:
                 cursor = conn.cursor()
                 cursor.execute(query)
                 conn.commit()
+                print("Tabla final creada con exito")
                 cursor.close()
             return True
-
         except Exception as e:
-            print(f"Error al crear tabla final {tabla}: {e}")
+            print(f"Error creando tabla final {tabla}: {e}")
             return False
 
     # -----------------------------
-    # BULK + TRANSFERENCIA
+    # BULK A TEMP + TRANSFERENCIA
     # -----------------------------
     @staticmethod
-    def ejecutar_bulk(ruta_txt: str, tabla: str, columnas: dict):
+    def ejecutar_bulk_dinamico(
+        ruta_txt: str,
+        tabla: str,
+        columnas: list[str]
+    ):
 
-        tabla_temp = f"{tabla}Temp"
-
-        if not Excel.crear_tabla_temp(tabla, columnas):
-            return
+        tabla_temp = f"{tabla}_temp"
+        columnas_sql = ", ".join(columnas)
 
         bulk_query = f"""
         BULK INSERT PagoArriendos.{tabla_temp}
@@ -90,15 +103,13 @@ class Excel:
         );
         """
 
-        columnas_sql = ", ".join(columnas.keys())
-
         insert_query = f"""
-        INSERT INTO PagoArriendos.{tabla} ({columnas_sql}, Estado)
+        INSERT INTO PagoArriendos.{tabla} ({columnas_sql}, EstadoRegistro)
         SELECT {columnas_sql}, 'Pendiente'
         FROM PagoArriendos.{tabla_temp};
         """
 
-        drop_temp_query = f"""
+        drop_query = f"""
         DROP TABLE PagoArriendos.{tabla_temp};
         """
 
@@ -107,18 +118,23 @@ class Excel:
                 conn.autocommit = True
                 cursor = conn.cursor()
 
-                Excel.crear_tabla_final(tabla, columnas)
+                if not ExcelRepo.crear_tabla_temp(tabla, columnas):
+                    return
+
+                ExcelRepo.crear_tabla_final(tabla, columnas)
+
                 cursor.execute(bulk_query)
                 cursor.execute(insert_query)
-                cursor.execute(drop_temp_query)
+                cursor.execute(drop_query)
 
                 cursor.close()
 
-            print("Carga BULK ejecutada correctamente")
+            print(f"Carga BULK ejecutada correctamente en {tabla}")
 
         except Exception as e:
-            print(f"Error durante la ejecución del BULK: {e}")
+            print(f"Error durante BULK dinámico en {tabla}: {e}")
 
+   
     # -----------------------------
     # OBTENER SOLO PENDIENTES
     # -----------------------------
@@ -128,7 +144,7 @@ class Excel:
         query = f"""
         SELECT TOP 8 *
         FROM PagoArriendos.{tabla}
-        WHERE Estado = 'Pendiente'
+        WHERE EstadoRegistro = 'Pendiente'
         """
 
         with Database.get_connection() as conn:
@@ -141,22 +157,4 @@ class Excel:
 
             return [dict(zip(columnas, fila)) for fila in rows]
         
-    def obtener_datos_por_posicion(tabla: str):
 
-        query = f"""
-        SELECT *
-        FROM PagoArriendos.{tabla}
-        WHERE Estado = 'Pendiente'
-            AND OC IS NOT NULL
-        ORDER BY Posicion
-        """
-
-        with Database.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query)
-
-            columnas = [col[0] for col in cursor.description]
-            rows = cursor.fetchall()
-            cursor.close()
-
-            return [dict(zip(columnas, fila)) for fila in rows]
