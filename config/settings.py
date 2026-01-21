@@ -7,6 +7,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuración SAP
+
+CADENA_CONFIG = {
+    'CADENA_URL': os.getenv('CADENA_URL'),
+    'CADENA_USUARIO': os.getenv('CADENA_USUARIO'),
+    'CADENA_PASSWORD': os.getenv('CADENA_PASSWORD') 
+}
+
 SAP_CONFIG = {
     'SAP_USUARIO': os.getenv('SAP_USUARIO'),
     'SAP_PASSWORD': os.getenv('SAP_PASSWORD'),

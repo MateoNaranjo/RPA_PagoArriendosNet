@@ -5,10 +5,13 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import TimeoutException
+from config import settings as CADENA_CONFIG
 
-URL = "https://colsubsidio.efacturacadena.com"
-USUARIO = "cgrpa055@colsubsidio.com"
-PASSWORD = "X7#pL9@mk"
+
+URL = CADENA_CONFIG.CADENA_CONFIG['CADENA_URL']
+USUARIO = CADENA_CONFIG.CADENA_CONFIG['CADENA_USUARIO']
+PASSWORD = CADENA_CONFIG.CADENA_CONFIG['CADENA_PASSWORD']
+
 
 def login_colsubsidio():
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
@@ -60,5 +63,5 @@ def login_colsubsidio():
 
     except Exception as e:
         driver.save_screenshot("error_login.png")
-        driver.quit()
+        #driver.quit()
         raise e

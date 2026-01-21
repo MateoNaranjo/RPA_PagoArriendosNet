@@ -28,7 +28,11 @@ def main():
     #     migo = TransaccionMIGO(sap)
     #     migo.contabilizar_entrada(oc, datos['factura'])
 
-    login_colsubsidio()
+    driver = login_colsubsidio()
+    print(type(driver))
+
+    
+    input("Login completado. Presiona ENTER para cerrar el navegador...")
 
 if __name__ == "__main__":
     main()
