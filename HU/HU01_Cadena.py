@@ -32,11 +32,11 @@ def HU01_Cadena():
 
                 for registro in TablaBase[29:]:
                     sesion = login_colsubsidio()
-                    realizar_consulta(sesion, "2025/08/01", "2025/08/20", "VM2400965258")
+                    realizar_consulta(sesion, oc="4001249504")
                     descargar_xml_final(sesion)
                 break
             except Exception as e:
-                continue
+                raise
 
         # ============================= Finalizacion HU =============================
         control_hu(task_name, 100)
