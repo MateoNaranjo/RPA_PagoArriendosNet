@@ -16,6 +16,7 @@ from config.init_config import in_config
 from funciones.Excel import ExcelService
 from repositorios.excel import ExcelRepo
 from funciones.ME80FN import ME80FN
+from datetime import datetime
 import pandas as pd
 import warnings
 
@@ -81,7 +82,7 @@ def HU01_Prueba():
 
             TablaBase = ExcelRepo.obtener_valores("BaseMedicamentosLimpio")
 
-        for registro in TablaBase[6:]:
+        for registro in TablaBase[28:]:
 
             ruta_cabecera= in_config("PathTemp")+"\cabecera.xlsx"
             ruta_repartos= in_config("PathTemp")+"\Reparto.xlsx"
@@ -155,11 +156,60 @@ def HU01_Prueba():
 
             
 
-            DatosME80FN = ExcelRepo.obtener_datos_por_posicion("valoresacomparar")
+            DatosME80FN = ExcelRepo.obtener_valores("valoresacomparar")
+
+            MAPA_MESES = {
+                1: "enero",
+                2: "febrero",
+                3: "marzo",
+                4: "abril",
+                5: "mayo",
+                6: "junio",
+                7: "julio",
+                8: "agosto",
+                9: "septiembre",
+                10: "octubre",
+                11: "noviembre",
+                12: "diciembre",
+            }
 
             for d in DatosME80FN:
+                fecha = datetime.strptime(d["fecha_entrega"], "%Y-%m-%d %H:%M:%S")
+                valor_sap = float(d["valor_neto"])
 
-                print("Fecha de entrega: ",d["fecha_entrega"])
+                if not fecha:
+                    continue  
+
+                mes = fecha.month
+                columna_mes = MAPA_MESES.get(mes)
+
+                if not columna_mes:
+                    continue
+
+                valor_excel = registro.get(columna_mes)
+
+                if valor_excel is None:
+                    print(
+                        f"OC {registro['orden_2025']} | "
+                        f"Mes {columna_mes.upper()} no existe en Excel"
+                    )
+                    continue
+
+                valor_excel = float(valor_excel)
+
+                if valor_sap == valor_excel:
+                    estado = "OK"
+                else:
+                    estado = "DIFERENCIA"
+
+                print(
+                    f"OC {registro['orden_2025']} | "
+                    f"Fecha: {fecha.date()} | "
+                    f"Mes: {columna_mes} | "
+                    f"SAP: {valor_sap:,.0f} | "
+                    f"Excel: {valor_excel:,.0f} | "
+                    f"Resultado: {estado}"
+                )
 
 
             # Finaliza proceso de operaciones

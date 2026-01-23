@@ -53,6 +53,7 @@ DATABASE = {
 }
 
 CADENA_CONFIG = {
+    'URL': os.getenv('URL_CADENA'),
     'USUARIO': os.getenv('USUARIO_CADENA'),
     'PASSWORD': os.getenv('PASSWORD_CADENA')
 }

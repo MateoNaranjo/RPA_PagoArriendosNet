@@ -1,12 +1,13 @@
 import HU.HU00_DespliegueAmbiente
-from HU.HU06_ValidacionPresupuesto import HU01_Prueba 
-from funciones.Cadena import login_colsubsidio
+#from HU.HU06_ValidacionPresupuesto import HU01_Prueba 
+from HU.HU01_Cadena import HU01_Cadena
+
 
 
 
 def main():
     #HU01_Prueba()
-    login_colsubsidio()
+    HU01_Cadena()
     
 if __name__ == "__main__":
     main()

@@ -142,7 +142,7 @@ class ExcelRepo:
     def obtener_valores(tabla: str):
 
         query = f"""
-        SELECT TOP 8 *
+        SELECT TOP 30 *
         FROM PagoArriendos.{tabla}
         WHERE EstadoRegistro = 'Pendiente'
         """
