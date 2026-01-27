@@ -16,7 +16,7 @@ from config.init_config import in_config
 from funciones.Excel import ExcelService
 from repositorios.excel import ExcelRepo
 from funciones.ME80FN import ME80FN
-from datetime import datetime
+from datetime import datetime, date
 import pandas as pd
 import warnings
 
@@ -82,6 +82,8 @@ def HU01_Prueba():
 
             TablaBase = ExcelRepo.obtener_valores("BaseMedicamentosLimpio")
 
+
+        reporte_validacion = []
         for registro in TablaBase[28:]:
 
             ruta_cabecera= in_config("PathTemp")+"\cabecera.xlsx"
@@ -176,6 +178,9 @@ def HU01_Prueba():
             for d in DatosME80FN:
                 fecha = datetime.strptime(d["fecha_entrega"], "%Y-%m-%d %H:%M:%S")
                 valor_sap = float(d["valor_neto"])
+                fecha_actual = date.today()
+                mes_actual = fecha_actual.month
+                
 
                 if not fecha:
                     continue  
@@ -202,15 +207,35 @@ def HU01_Prueba():
                 else:
                     estado = "DIFERENCIA"
 
-                print(
-                    f"OC {registro['orden_2025']} | "
-                    f"Fecha: {fecha.date()} | "
-                    f"Mes: {columna_mes} | "
-                    f"SAP: {valor_sap:,.0f} | "
-                    f"Excel: {valor_excel:,.0f} | "
-                    f"Resultado: {estado}"
+                if mes == mes_actual:
+                    print(
+                        f"OC {registro['orden_2025']} | "
+                        f"Fecha: {fecha.date()} | "
+                        f"Mes: {columna_mes} | "
+                        f"SAP: {valor_sap:,.0f} | "
+                        f"Excel: {valor_excel:,.0f} | "
+                        f"Resultado: {estado}"
+                    )
+                    reporte_validacion.append({
+                        "OC": registro["orden_2025"],
+                        "Fecha_entrega": fecha.date(),
+                        "Mes": columna_mes,
+                        "Valor_SAP": valor_sap,
+                        "Valor_Excel": valor_excel,
+                        "Resultado": estado
+                    })
+
+                df_reporte = pd.DataFrame(reporte_validacion)
+
+                ruta_reporte = (
+                    in_config("PathTemp") + "\\Reporte_Validacion_Presupuesto.xlsx"
                 )
 
+                df_reporte.to_excel(
+                    ruta_reporte,
+                    index=False,
+                    sheet_name="Validacion"
+                )
 
             # Finaliza proceso de operaciones
             if os.path.exists(ruta_cabecera) and os.path.exists(ruta_repartos) and os.path.exists(ruta_tabla_final) :              
@@ -244,4 +269,3 @@ def HU01_Prueba():
         # WriteLog()
         log = "Finalizacion HU"
         print(log)
-        
