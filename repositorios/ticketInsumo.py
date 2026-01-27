@@ -39,7 +39,7 @@ class GestionTicketInsumo:
         finalizar=False
     ):
         query = """
-            UPDATE TicketInsumo
+            UPDATE PagoArriendos.TicketInsumo
             SET estado = %s,
                 observaciones = %s,
                 numeroreintentos = numeroreintentos + %s,
