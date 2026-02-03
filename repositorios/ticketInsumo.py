@@ -31,7 +31,6 @@ class GestionTicketInsumo:
 
     def actualizar_estado(
         self,
-        conn,
         codigo,
         estado,
         observaciones=None,

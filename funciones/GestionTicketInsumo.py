@@ -1,12 +1,13 @@
 from config.database import Database
 from repositorios.ticketInsumo import GestionTicketInsumo
+import socket
 
 class TicketInsumoService:
 
     MAX_REINTENTOS = 3
 
     def __init__(self, maquina: str):
-        self.maquina = maquina
+        self.maquina = maquina or socket.gethostbyname()
 
     def iniciar(self, codigo: str):
 

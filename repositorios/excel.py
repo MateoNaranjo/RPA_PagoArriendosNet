@@ -156,5 +156,3 @@ class ExcelRepo:
             cursor.close()
 
             return [dict(zip(columnas, fila)) for fila in rows]
-        
-

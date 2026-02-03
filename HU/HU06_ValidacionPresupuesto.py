@@ -208,13 +208,16 @@ def HU01_Prueba():
                     estado = "DIFERENCIA"
 
                 if mes == mes_actual:
+                    vmt2 = float(registro['mts2'])   
+                    vumt2 = valor_excel / vmt2   
                     print(
                         f"OC {registro['orden_2025']} | "
                         f"Fecha: {fecha.date()} | "
                         f"Mes: {columna_mes} | "
                         f"SAP: {valor_sap:,.0f} | "
                         f"Excel: {valor_excel:,.0f} | "
-                        f"Resultado: {estado}"
+                        f"Resultado: {estado} | "
+                        f"Valor Unitario MT2: {vumt2:,.0f} | " 
                     )
                     reporte_validacion.append({
                         "OC": registro["orden_2025"],
@@ -225,17 +228,7 @@ def HU01_Prueba():
                         "Resultado": estado
                     })
 
-                df_reporte = pd.DataFrame(reporte_validacion)
-
-                ruta_reporte = (
-                    in_config("PathTemp") + "\\Reporte_Validacion_Presupuesto.xlsx"
-                )
-
-                df_reporte.to_excel(
-                    ruta_reporte,
-                    index=False,
-                    sheet_name="Validacion"
-                )
+                    ruta_reporte = in_config("PathTemp") + rf"\Reporte_Validacion_Presupuesto_{columna_mes}.xlsx"
 
             # Finaliza proceso de operaciones
             if os.path.exists(ruta_cabecera) and os.path.exists(ruta_repartos) and os.path.exists(ruta_tabla_final) :              
@@ -249,6 +242,13 @@ def HU01_Prueba():
             for i in range(2):
                 sap.MenuPrincipal()
 
+        df_reporte = pd.DataFrame(reporte_validacion)
+
+        df_reporte.to_excel(
+                ruta_reporte,
+                index=False,
+                sheet_name="Validacion"
+            )
         # ============================= Finalizacion HU =============================
 
         control_hu(task_name, 100)
